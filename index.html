@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOPA — Solicitações Organizadas para Atendimento</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23c8763a'/%3E%3Ctext x='50' y='68' font-size='54' text-anchor='middle' fill='%231c1710' font-family='Georgia,serif'%3ES%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+(function () {
+  var saved = localStorage.getItem("sopa.theme");
+  var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="wordmark-group">
+    <div class="wordmark">SOPA<span class="wordmark-dot">.</span></div>
+    <div class="wordmark-full">Solicitações Organizadas para Atendimento</div>
+  </div>
+
+  <nav class="tab-strip" role="tablist" aria-label="Visões do aplicativo">
+    <button class="tab-btn is-active" role="tab" aria-selected="true" data-view="board" id="tab-board">
+      <span class="tab-idx">I</span> Tarefas
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" data-view="dashboard" id="tab-dashboard">
+      <span class="tab-idx">II</span> Análises
+    </button>
+  </nav>
+
+  <div class="header-actions">
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro">
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3.4" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.4M8 13.6V15M15 8h-1.4M2.4 8H1M12.7 3.3l-1 1M4.3 11.7l-1 1M12.7 12.7l-1-1M4.3 4.3l-1-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M14 9.3A6 6 0 116.7 2 4.8 4.8 0 0014 9.3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="btn-secondary" id="btn-export" type="button">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5v8M8 9.5L4.8 6.3M8 9.5l3.2-3.2M2 11.5v1.8a1.2 1.2 0 001.2 1.2h9.6a1.2 1.2 0 001.2-1.2v-1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Exportar
+    </button>
+    <button class="btn-primary" id="btn-new-task" type="button">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1V13M1 7H13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Nova solicitação
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- ===================== TAREFAS (KANBAN) ===================== -->
+  <section id="view-board" class="view is-active" aria-labelledby="tab-board">
+    <div class="board-layout">
+      <aside class="filters-panel" id="filters-panel"><!-- injetado por filters.js --></aside>
+      <div class="board-main">
+        <div class="board-result-bar" id="board-result-bar"></div>
+        <div class="board" id="board">
+          <!-- columns injected by board.js -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ANÁLISES ===================== -->
+  <section id="view-dashboard" class="view" aria-labelledby="tab-dashboard">
+    <div class="dash-head">
+      <div>
+        <h1 class="dash-title">Análises</h1>
+        <p class="dash-sub">Leitura da operação de atendimento — volume, ritmo, SLA e origem das solicitações.</p>
+      </div>
+      <div class="dash-updated">
+        Atualizado em <span id="dash-updated-time" class="mono"></span>
+      </div>
+    </div>
+
+    <div class="metric-grid" id="metric-grid"><!-- metric tiles injected --></div>
+
+    <div class="chart-grid">
+      <article class="panel panel-wide" id="panel-monthly">
+        <header class="panel-head">
+          <h2>Histórico mensal de abertura</h2>
+          <p>Solicitações abertas por mês</p>
+        </header>
+        <div class="panel-body" id="chart-monthly"></div>
+      </article>
+
+      <article class="panel" id="panel-priority">
+        <header class="panel-head">
+          <h2>Prioridade em aberto</h2>
+          <p>Solicitações ativas por prioridade e status</p>
+        </header>
+        <div class="panel-body" id="chart-priority"></div>
+      </article>
+
+      <article class="panel" id="panel-aging">
+        <header class="panel-head">
+          <h2>Idade do backlog</h2>
+          <p>Há quanto tempo as solicitações aguardam início</p>
+        </header>
+        <div class="panel-body" id="chart-aging"></div>
+      </article>
+
+      <article class="panel panel-wide" id="panel-treemap">
+        <header class="panel-head">
+          <h2>Itens mais solicitados</h2>
+          <p>Total por categoria — histórico completo</p>
+        </header>
+        <div class="panel-body" id="chart-treemap"></div>
+      </article>
+
+      <article class="panel" id="panel-top-requesters">
+        <header class="panel-head">
+          <h2>Top 5 solicitantes</h2>
+          <p>Pessoas que mais abriram solicitações</p>
+        </header>
+        <div class="panel-body" id="chart-top-requesters"></div>
+      </article>
+
+      <article class="panel" id="panel-top-sectors">
+        <header class="panel-head">
+          <h2>Top 5 setores</h2>
+          <p>Setores que mais solicitam, por prioridade</p>
+        </header>
+        <div class="panel-body" id="chart-top-sectors"></div>
+      </article>
+
+      <article class="panel panel-wide" id="panel-workload">
+        <header class="panel-head">
+          <h2>Carga por responsável</h2>
+          <p>Distribuição de solicitações ativas e concluídas por pessoa</p>
+        </header>
+        <div class="panel-body" id="chart-workload"></div>
+      </article>
+
+      <article class="panel panel-wide" id="panel-throughput">
+        <header class="panel-head">
+          <h2>Conclusões por semana</h2>
+          <p>Solicitações finalizadas nas últimas 8 semanas</p>
+        </header>
+        <div class="panel-body" id="chart-throughput"></div>
+      </article>
+
+      <article class="panel panel-wide" id="panel-trend">
+        <header class="panel-head">
+          <h2>Ritmo de conclusão — 30 dias</h2>
+          <p>Total acumulado de solicitações concluídas</p>
+        </header>
+        <div class="panel-body" id="chart-trend"></div>
+      </article>
+
+      <article class="panel panel-wide" id="panel-overdue">
+        <header class="panel-head">
+          <h2>Solicitações em atraso</h2>
+          <p>Prazo vencido e ainda não concluídas</p>
+        </header>
+        <div class="panel-body" id="table-overdue"></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<!-- ===================== MODAL: NOVA / EDITAR SOLICITAÇÃO ===================== -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header class="modal-head">
+      <div>
+        <h2 id="modal-title">Nova solicitação</h2>
+        <span class="modal-code mono" id="modal-code"></span>
+      </div>
+      <button class="icon-btn" id="modal-close" type="button" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2L14 14M14 2L2 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <form id="task-form">
+      <input type="hidden" id="task-id" />
+      <label class="field">
+        <span>Título</span>
+        <input type="text" id="task-title" required maxlength="180" placeholder="Ex.: Reparo de ar-condicionado" />
+      </label>
+      <label class="field">
+        <span>Descrição</span>
+        <textarea id="task-desc" rows="3" maxlength="2000" placeholder="Detalhes opcionais"></textarea>
+      </label>
+      <label class="field">
+        <span>Inserir link</span>
+        <input type="url" id="task-link" maxlength="500" placeholder="https://…" />
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Categoria</span>
+          <select id="task-category"></select>
+        </label>
+        <label class="field">
+          <span>Prioridade</span>
+          <select id="task-priority">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="field-section-label">Solicitante</p>
+      <div class="field-row">
+        <label class="field">
+          <span>Nome</span>
+          <input type="text" id="task-requester-name" required maxlength="60" placeholder="Ex.: Camila Duarte" />
+        </label>
+        <label class="field">
+          <span>Setor</span>
+          <input type="text" id="task-requester-sector" list="sector-suggestions" required maxlength="40" placeholder="Ex.: Financeiro" />
+          <datalist id="sector-suggestions"></datalist>
+        </label>
+      </div>
+
+      <p class="field-section-label">Atendimento</p>
+      <div class="field-row">
+        <label class="field">
+          <span>Responsável</span>
+          <select id="task-assignee"></select>
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select id="task-status"></select>
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span>Prazo — data</span>
+          <input type="date" id="task-due-date" />
+        </label>
+        <label class="field">
+          <span>Prazo — horário</span>
+          <input type="time" id="task-due-time" value="17:00" />
+        </label>
+      </div>
+
+      <div class="field">
+        <span>Anexos</span>
+        <div class="attachment-list" id="attachment-list"></div>
+        <label class="attachment-add">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11 4.5L5.5 10a2 2 0 102.83 2.83L14 7.17a3.5 3.5 0 10-4.95-4.95L3.5 7.75" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Anexar arquivo</span>
+          <input type="file" id="task-attachment-input" multiple hidden />
+        </label>
+      </div>
+
+      <footer class="modal-foot">
+        <button type="button" class="btn-ghost" id="btn-delete-task">Excluir</button>
+        <div class="modal-foot-right">
+          <button type="button" class="btn-secondary" id="btn-cancel-task">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar solicitação</button>
+        </div>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="data.js"></script>
+<script src="business.js"></script>
+<script src="charts.js"></script>
+<script src="filters.js"></script>
+<script src="board.js"></script>
+<script src="dashboard.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
