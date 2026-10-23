@@ -23,6 +23,7 @@ const DAY_MS = 86400000;
 const CAMP_COLUMNS = {
   name: "Nome da Campanha",
   sender: "Enviado por",
+  sector: "Setor",
   sentAt: "Data de Envio",
   subject: "Assunto",
   sent: "Enviado para",
@@ -219,6 +220,13 @@ function seriesOf(name) {
 
 function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
 
+// linhas ainda não classificadas trazem o e-mail do remetente no lugar do
+// setor — tratadas como "não informado" ("" ) e fora do ranking de setores
+function parseSector(value) {
+  const s = String(value ?? "").replace(/\s+/g, " ").trim();
+  return !s || s.includes("@") ? "" : s;
+}
+
 function campaignsFromCSV(text) {
   const rows = parseCSV(text);
   if (rows.length < 2) throw new Error("O arquivo está vazio ou não tem nenhuma linha de campanha.");
@@ -260,6 +268,7 @@ function campaignsFromCSV(text) {
       name,
       subject: get(r, "subject").replace(/\s+/g, " ").trim(),
       sender: get(r, "sender").trim(),
+      sector: parseSector(get(r, "sector")),
       sentAt,
       series: seriesOf(name),
       isTest: /\bteste\b/i.test(name),
@@ -572,6 +581,7 @@ const Campaigns = {
     this.renderFunnel(list, total, opts);
     this.renderWeekday(list, opts);
     this.renderHour(list, opts);
+    this.renderSectors(list, opts);
     this.renderTopClicks(list, opts);
     this.renderSeries(list, opts);
     this.renderAlerts(list, opts);
@@ -648,13 +658,43 @@ const Campaigns = {
     lineChart(document.getElementById("chart-click"), rateSeries((a) => a.clickRate), { formatValue: fmtPctPoints });
     const bestClick = bestOf((a) => a.clickRate);
     setNote("panel-click", `Melhor mês: ${bestClick.label}, com ${fmtPct(bestClick.agg.clickRate)} de cliques.`);
+  },
 
-    lineChart(document.getElementById("chart-bounce"), rateSeries((a) => a.bounceRate), { color: "var(--danger)", formatValue: fmtPctPoints });
-    const worst = bestOf((a) => a.bounceRate);
-    const total = aggregate(list, opts);
-    setNote("panel-bounce", worst.agg.bounceRate >= 0.02
-      ? `Bounce médio de ${fmtPct(total.bounceRate)}; ${worst.label} passou de 2% (${fmtPct(worst.agg.bounceRate)}) — vale revisar a lista usada.`
-      : `Bounce médio de ${fmtPct(total.bounceRate)}, abaixo da referência de 2% em todos os meses.`);
+  // mesma lógica do volume mensal: conta campanhas (envios) por setor
+  renderSectors(list, opts) {
+    const container = document.getElementById("chart-sectors");
+    // agrupa sem diferenciar maiúsculas/acentos ("TI" = "ti"), exibindo a grafia mais frequente
+    const groups = groupBy(list.filter((c) => c.sector), (c) => normalizeText(c.sector));
+    const ranked = [...groups.values()]
+      .map((items) => {
+        const spellings = groupBy(items, (c) => c.sector);
+        const label = [...spellings.entries()].sort((a, b) => b[1].length - a[1].length)[0][0];
+        return { label, agg: aggregate(items, opts) };
+      })
+      .sort((a, b) => b.agg.n - a.agg.n || b.agg.sent - a.agg.sent)
+      .slice(0, 10);
+    const unassigned = list.filter((c) => !c.sector).length;
+    const unassignedNote = unassigned
+      ? ` ${fmtInt(unassigned)} ${plural(unassigned, "campanha está", "campanhas estão")} sem setor na planilha e não ${plural(unassigned, "entra", "entram")} no ranking.`
+      : "";
+
+    if (!ranked.length) {
+      container.innerHTML = `<p class="empty-note">Nenhuma campanha com setor preenchido no recorte.</p>`;
+      setNote("panel-sectors", unassignedNote.trim());
+      return;
+    }
+
+    const campaignsLabel = (n) => `${fmtInt(n)} ${plural(n, "campanha", "campanhas")}`;
+    barChartHorizontal(container, ranked.map(({ label, agg }) => ({
+      label: truncate(label, 18),
+      fullLabel: campEscape(label),
+      value: agg.n,
+      tooltipValue: `${campaignsLabel(agg.n)} · ${fmtInt(agg.sent)} destinatários · ${fmtPct(agg.openRate)} de abertura`,
+    })), { formatValue: fmtInt, barHeight: 18, gap: 8 });
+
+    const top = ranked[0];
+    const share = ratio(top.agg.n, list.length - unassigned);
+    setNote("panel-sectors", `${top.label} lidera com ${campaignsLabel(top.agg.n)} (${fmtPct(share)} das campanhas com setor).${unassignedNote}`);
   },
 
   // mesma lógica do volume mensal: conta campanhas (envios), não destinatários —
