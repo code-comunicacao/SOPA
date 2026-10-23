@@ -83,6 +83,7 @@ const MONTHS_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "s
 const NF_INT = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const NF_COMPACT = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 const NF_DEC1 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const NF_DEC2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function fmtInt(n) { return NF_INT.format(n); }
 function fmtPct(ratioValue) { return NF_DEC1.format(ratioValue * 100) + "%"; }
@@ -568,7 +569,7 @@ const Campaigns = {
     this.renderSummary(list, total);
     this.renderMetrics(list, total, opts);
     this.renderMonthly(list, opts);
-    this.renderFunnel(total, opts);
+    this.renderFunnel(list, total, opts);
     this.renderWeekday(list, opts);
     this.renderHour(list, opts);
     this.renderTopClicks(list, opts);
@@ -601,7 +602,7 @@ const Campaigns = {
       { value: pctValue(total.clickRate), unit: "%", label: "Taxa de cliques", ...periodTrend(list, opts, (a) => a.clickRate) },
       { value: pctValue(total.ctor), unit: "%", label: "Cliques por abertura (CTOR)" },
       { value: pctValue(total.bounceRate), unit: "%", label: "Taxa de bounce", alert: total.bounceRate >= 0.02 },
-      { value: fmtInt(total.unsubscribes), label: `Descadastros (${fmtPct(total.unsubRate)} dos entregues)` },
+      { value: fmtInt(total.unsubscribes), label: `Descadastros (${NF_DEC2.format(total.unsubRate * 100)}% dos entregues)` },
       { value: fmtInt(total.complaints), label: "Reclamações de spam", alert: total.complaints > 0 },
       { value: pctValue(total.mppShare), unit: "%", label: "Aberturas automáticas (Apple MPP)" },
     ];
@@ -622,13 +623,16 @@ const Campaigns = {
     const months = monthGroups(list).map((m) => ({ ...m, agg: aggregate(m.items, opts) }));
     const campaignsLabel = (n) => `${n} ${plural(n, "campanha", "campanhas")}`;
 
-    barChartVertical(document.getElementById("chart-volume"), months.map((m) => ({
+    const volumeEl = document.getElementById("chart-volume");
+    barChartVertical(volumeEl, months.map((m) => ({
       label: m.label,
-      value: m.agg.sent,
-      tooltipValue: `${fmtInt(m.agg.sent)} e-mails · ${campaignsLabel(m.agg.n)}`,
-    })), { formatValue: (v) => NF_COMPACT.format(v) });
-    const peak = months.reduce((a, b) => (b.agg.sent > a.agg.sent ? b : a));
-    setNote("panel-volume", `${peak.label} teve o maior volume do período: ${fmtInt(peak.agg.sent)} e-mails em ${campaignsLabel(peak.agg.n)}.`);
+      value: m.agg.n,
+      tooltipValue: `${campaignsLabel(m.agg.n)} · ${fmtInt(m.agg.sent)} destinatários`,
+    })), { formatValue: fmtInt });
+    // com muitos meses o gráfico rola na horizontal — começa mostrando os mais recentes
+    volumeEl.scrollLeft = volumeEl.scrollWidth;
+    const peak = months.reduce((a, b) => (b.agg.n > a.agg.n ? b : a));
+    setNote("panel-volume", `${peak.label} teve o maior número de envios do período: ${campaignsLabel(peak.agg.n)}, para ${fmtInt(peak.agg.sent)} destinatários.`);
 
     const rateSeries = (pick) => months.map((m) => ({
       label: m.label,
@@ -653,22 +657,27 @@ const Campaigns = {
       : `Bounce médio de ${fmtPct(total.bounceRate)}, abaixo da referência de 2% em todos os meses.`);
   },
 
-  renderFunnel(total, opts) {
+  // mesma lógica do volume mensal: conta campanhas (envios), não destinatários —
+  // cada etapa é o número de campanhas que teve ao menos uma entrega/abertura/clique
+  renderFunnel(list, total, opts) {
+    const opensOf = (c) => (opts.excludeMpp ? c.opens - c.mpp : c.opens);
     const steps = [
-      { label: "Enviados", value: total.sent },
-      { label: "Entregues", value: total.delivered },
-      { label: opts.excludeMpp ? "Abriram (s/ MPP)" : "Abriram", value: total.openBase },
-      { label: "Clicaram", value: total.clicks },
+      { label: "Enviadas", value: list.length, people: total.sent, peopleLabel: "destinatários" },
+      { label: "Com entregas", value: list.filter((c) => c.delivered > 0).length, people: total.delivered, peopleLabel: "e-mails entregues" },
+      { label: opts.excludeMpp ? "Com aberturas (s/ MPP)" : "Com aberturas", value: list.filter((c) => opensOf(c) > 0).length, people: total.openBase, peopleLabel: "aberturas" },
+      { label: "Com cliques", value: list.filter((c) => c.clicks > 0).length, people: total.clicks, peopleLabel: "cliques" },
     ];
     const el = document.getElementById("chart-funnel");
     barChartHorizontal(el, steps.map((s) => ({
-      ...s,
-      tooltipValue: `${fmtInt(s.value)} · ${fmtPct(ratio(s.value, total.sent))} dos enviados`,
-    })), { formatValue: fmtInt, labelWidth: 120, padRight: 76 });
+      label: s.label,
+      value: s.value,
+      tooltipValue: `${fmtInt(s.value)} ${plural(s.value, "campanha", "campanhas")} · ${fmtPct(ratio(s.value, list.length))} das enviadas · ${fmtInt(s.people)} ${s.peopleLabel}`,
+    })), { formatValue: fmtInt, labelWidth: opts.excludeMpp ? 170 : 120, padRight: 60 });
 
-    const per100Open = Math.round(total.openRate * 100);
-    const per100Click = Math.round(total.clickRate * 100);
-    let note = `De cada 100 e-mails entregues, ${per100Open} são abertos e ${per100Click} ${plural(per100Click, "recebe", "recebem")} clique.`;
+    const withClicks = steps[3].value;
+    const noClicks = list.length - withClicks;
+    let note = `Das ${fmtInt(list.length)} campanhas, ${fmtInt(withClicks)} (${fmtPct(ratio(withClicks, list.length))}) tiveram ao menos um clique`;
+    note += noClicks > 0 ? `; ${fmtInt(noClicks)} não ${plural(noClicks, "teve", "tiveram")} nenhum.` : ".";
     if (!opts.excludeMpp && total.mppShare >= 0.1) {
       note += ` ${fmtPct(total.mppShare)} das aberturas são automáticas (Apple MPP); marque “Descontar aberturas Apple MPP” para estimar a abertura real.`;
     }
