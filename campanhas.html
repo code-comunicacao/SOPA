@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOPA — Campanhas de e-mail</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23c8763a'/%3E%3Ctext x='50' y='68' font-size='54' text-anchor='middle' fill='%231c1710' font-family='Georgia,serif'%3ES%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem("sopa.theme"); } catch (e) {}
+  var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="wordmark-group">
+    <div class="wordmark">SOPA<span class="wordmark-dot">.</span></div>
+    <div class="wordmark-full">Solicitações Organizadas para Atendimento</div>
+  </div>
+
+  <nav class="tab-strip" aria-label="Seções do aplicativo">
+    <a class="tab-btn" href="index.html"><span class="tab-idx">I</span> Tarefas</a>
+    <a class="tab-btn" href="index.html#analises"><span class="tab-idx">II</span> Análises</a>
+    <a class="tab-btn is-active" href="campanhas.html" aria-current="page"><span class="tab-idx">III</span> Campanhas</a>
+  </nav>
+
+  <div class="header-actions">
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro">
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3.4" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.4M8 13.6V15M15 8h-1.4M2.4 8H1M12.7 3.3l-1 1M4.3 11.7l-1 1M12.7 12.7l-1-1M4.3 4.3l-1-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M14 9.3A6 6 0 116.7 2 4.8 4.8 0 0014 9.3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="btn-secondary" id="btn-refresh" type="button">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 113 4.6M3 1.8v2.8h2.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="btn-refresh-label">Atualizar</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="view is-active" aria-labelledby="camp-title">
+    <div class="dash-head">
+      <div>
+        <h1 class="dash-title" id="camp-title">Campanhas de e-mail</h1>
+        <p class="dash-sub" id="camp-summary">Carregando dados da planilha de campanhas…</p>
+      </div>
+      <div class="dash-updated">
+        <span id="camp-source-text"></span>
+        <a class="link-btn" id="camp-sheet-link" target="_blank" rel="noopener noreferrer">Abrir planilha</a>
+      </div>
+    </div>
+
+    <!-- ===================== CARREGANDO / ERRO ===================== -->
+    <div class="camp-empty" id="camp-empty">
+      <div class="camp-status" role="status" aria-live="polite">
+        <strong id="camp-status-title">Carregando dados da planilha…</strong>
+        <span id="camp-status-text">Os números são lidos direto do Google Sheets.</span>
+        <button type="button" class="btn-primary" id="btn-retry" hidden>Tentar novamente</button>
+      </div>
+    </div>
+
+    <!-- ===================== PAINEL ===================== -->
+    <div id="camp-content" hidden>
+      <div class="camp-filters" role="search">
+        <label class="filter-search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="search" id="f-search" placeholder="Buscar por nome ou assunto" aria-label="Buscar por nome ou assunto" />
+        </label>
+        <label class="filter-select-field">
+          Série
+          <select id="f-series"></select>
+        </label>
+        <label class="filter-select-field" id="f-sender-field">
+          Remetente
+          <select id="f-sender"></select>
+        </label>
+        <div class="filter-date-row">
+          <label class="filter-date-field">De <input type="date" id="f-from" /></label>
+          <label class="filter-date-field">Até <input type="date" id="f-to" /></label>
+        </div>
+        <label class="filter-select-field">
+          Tamanho do envio
+          <select id="f-min-sent">
+            <option value="0">Todos</option>
+            <option value="10">10+ destinatários</option>
+            <option value="100">100+ destinatários</option>
+            <option value="1000">1.000+ destinatários</option>
+          </select>
+        </label>
+        <div class="camp-filter-checks">
+          <label class="filter-check" title="Envios cujo nome contém “teste”">
+            <input type="checkbox" id="f-hide-tests" checked /> Ignorar envios de teste
+          </label>
+          <label class="filter-check" title="O Apple Mail Privacy Protection abre os e-mails automaticamente e infla a taxa de abertura">
+            <input type="checkbox" id="f-exclude-mpp" /> Descontar aberturas Apple MPP
+          </label>
+        </div>
+        <div class="camp-filters-foot">
+          <span id="camp-result-bar"></span>
+          <button type="button" class="link-btn" id="btn-reset-filters">Limpar filtros</button>
+        </div>
+      </div>
+
+      <p class="empty-note" id="camp-noresults" hidden>Nenhuma campanha corresponde aos filtros selecionados.</p>
+
+      <div class="metric-grid" id="metric-grid"></div>
+
+      <div class="chart-grid" id="camp-charts">
+        <article class="panel panel-wide" id="panel-volume">
+          <header class="panel-head">
+            <h2>Volume mensal</h2>
+            <p>E-mails enviados por mês</p>
+          </header>
+          <div class="panel-body" id="chart-volume"></div>
+        </article>
+
+        <article class="panel" id="panel-open">
+          <header class="panel-head">
+            <h2>Taxa de abertura por mês</h2>
+            <p>Aberturas únicas ÷ e-mails entregues</p>
+          </header>
+          <div class="panel-body" id="chart-open"></div>
+        </article>
+
+        <article class="panel" id="panel-click">
+          <header class="panel-head">
+            <h2>Taxa de cliques por mês</h2>
+            <p>Pessoas que clicaram ÷ e-mails entregues</p>
+          </header>
+          <div class="panel-body" id="chart-click"></div>
+        </article>
+
+        <article class="panel" id="panel-funnel">
+          <header class="panel-head">
+            <h2>Funil de engajamento</h2>
+            <p>Do envio ao clique, no período filtrado</p>
+          </header>
+          <div class="panel-body" id="chart-funnel"></div>
+        </article>
+
+        <article class="panel" id="panel-weekday">
+          <header class="panel-head">
+            <h2>Abertura por dia da semana</h2>
+            <p>Taxa de abertura conforme o dia do envio</p>
+          </header>
+          <div class="panel-body" id="chart-weekday"></div>
+        </article>
+
+        <article class="panel" id="panel-hour">
+          <header class="panel-head">
+            <h2>Abertura por horário de envio</h2>
+            <p>Taxa de abertura conforme a faixa de horário</p>
+          </header>
+          <div class="panel-body" id="chart-hour"></div>
+        </article>
+
+        <article class="panel" id="panel-bounce">
+          <header class="panel-head">
+            <h2>Saúde da lista</h2>
+            <p>Taxa de bounce (não entregues ÷ enviados) por mês</p>
+          </header>
+          <div class="panel-body" id="chart-bounce"></div>
+        </article>
+
+        <article class="panel panel-wide" id="panel-top">
+          <header class="panel-head">
+            <h2>Top 10 campanhas por taxa de cliques</h2>
+            <p>Somente envios com 100 ou mais e-mails entregues</p>
+          </header>
+          <div class="panel-body" id="chart-top"></div>
+        </article>
+
+        <article class="panel panel-wide" id="panel-series">
+          <header class="panel-head">
+            <h2>Desempenho por série</h2>
+            <p>Newsletters e campanhas recorrentes agrupadas pelo nome</p>
+          </header>
+          <div class="panel-body" id="table-series"></div>
+        </article>
+
+        <article class="panel panel-wide" id="panel-alerts">
+          <header class="panel-head">
+            <h2>Alertas de entregabilidade</h2>
+            <p>Envios com bounce de 2% ou mais, descadastros de 0,5% ou mais, ou reclamações de spam</p>
+          </header>
+          <div class="panel-body" id="table-alerts"></div>
+        </article>
+
+        <article class="panel panel-wide" id="panel-all">
+          <header class="panel-head">
+            <h2>Todas as campanhas</h2>
+            <p>Clique no título de uma coluna para ordenar</p>
+          </header>
+          <div class="panel-body" id="table-all"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="charts.js"></script>
+<script src="campanhas.js"></script>
+</body>
+</html>

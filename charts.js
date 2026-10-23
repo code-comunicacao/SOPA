@@ -54,9 +54,9 @@ function tooltipHTML(title, value) {
 }
 
 /**
- * Vertical bar chart. data: [{ label, value }]
+ * Vertical bar chart. data: [{ label, value, tooltipValue? }]
  */
-function barChartVertical(container, data, { color = "var(--accent)", height = 220, valueSuffix = "" } = {}) {
+function barChartVertical(container, data, { color = "var(--accent)", height = 220, valueSuffix = "", formatValue = (v) => v + valueSuffix } = {}) {
   container.innerHTML = "";
   const width = Math.max(container.clientWidth || 560, data.length * 56);
   const padTop = 26, padBottom = 30, padLeft = 8, padRight = 8;
@@ -83,7 +83,7 @@ function barChartVertical(container, data, { color = "var(--accent)", height = 2
     }));
 
     const label = svgEl("text", { class: "value-label", x: x + barW / 2, y: y - 8, "text-anchor": "middle", "font-size": 12 });
-    label.textContent = d.value + valueSuffix;
+    label.textContent = formatValue(d.value);
     svg.appendChild(label);
 
     const cat = svgEl("text", { x: x + barW / 2, y: height - 10, "text-anchor": "middle", "font-size": 11 });
@@ -91,7 +91,7 @@ function barChartVertical(container, data, { color = "var(--accent)", height = 2
     svg.appendChild(cat);
 
     const hit = svgEl("rect", { class: "hit-area", x, y: padTop, width: barW, height: innerH, fill: "transparent" });
-    wireTooltip(hit, tooltipHTML(d.label, d.value + valueSuffix));
+    wireTooltip(hit, tooltipHTML(d.label, d.tooltipValue ?? formatValue(d.value)));
     svg.appendChild(hit);
   });
 
@@ -101,13 +101,13 @@ function barChartVertical(container, data, { color = "var(--accent)", height = 2
 }
 
 /**
- * Horizontal bar chart. data: [{ label, value }]
+ * Horizontal bar chart. data: [{ label, value, fullLabel?, tooltipValue? }]
+ * (fullLabel/tooltipValue entram no tooltip como HTML — escape antes)
  */
-function barChartHorizontal(container, data, { color = "var(--accent)", barHeight = 26, gap = 14, maxOverride = null } = {}) {
+function barChartHorizontal(container, data, { color = "var(--accent)", barHeight = 26, gap = 14, maxOverride = null, labelWidth = 132, padRight = 46, formatValue = (v) => v } = {}) {
   container.innerHTML = "";
   const width = Math.max(container.clientWidth || 560, 320);
-  const labelW = 132;
-  const padRight = 46;
+  const labelW = labelWidth;
   const rowH = barHeight + gap;
   const height = data.length * rowH + 10;
   const max = maxOverride ?? Math.max(1, ...data.map((d) => d.value));
@@ -127,11 +127,11 @@ function barChartHorizontal(container, data, { color = "var(--accent)", barHeigh
     svg.appendChild(svgEl("rect", { class: "bar", x: labelW, y, width: Math.max(w, 2), height: barHeight, rx: 4, fill: color }));
 
     const val = svgEl("text", { class: "value-label", x: labelW + Math.max(w, 2) + 10, y: y + barHeight / 2 + 4, "font-size": 12 });
-    val.textContent = d.value;
+    val.textContent = formatValue(d.value);
     svg.appendChild(val);
 
     const hit = svgEl("rect", { class: "hit-area", x: labelW, y: i * rowH, width: innerW, height: rowH, fill: "transparent" });
-    wireTooltip(hit, tooltipHTML(d.label, d.value));
+    wireTooltip(hit, tooltipHTML(d.fullLabel ?? d.label, d.tooltipValue ?? formatValue(d.value)));
     svg.appendChild(hit);
   });
 
@@ -181,9 +181,9 @@ function barChartHorizontalStacked(container, data, { barHeight = 24, gap = 16 }
 }
 
 /**
- * Line/area chart. data: [{ label, value }]
+ * Line/area chart. data: [{ label, value, tooltipValue? }]
  */
-function lineChart(container, data, { color = "var(--accent)", height = 200 } = {}) {
+function lineChart(container, data, { color = "var(--accent)", height = 200, formatValue = (v) => v } = {}) {
   container.innerHTML = "";
   const width = Math.max(container.clientWidth || 560, 480);
   const padTop = 20, padBottom = 26, padLeft = 8, padRight = 8;
@@ -237,7 +237,7 @@ function lineChart(container, data, { color = "var(--accent)", height = 200 } = 
   // generous invisible hit circles so every point is easy to hover
   points.forEach(([x, y], i) => {
     const hit = svgEl("circle", { class: "hit-area", cx: x, cy: y, r: 10, fill: "transparent" });
-    wireTooltip(hit, tooltipHTML(data[i].label, data[i].value));
+    wireTooltip(hit, tooltipHTML(data[i].label, data[i].tooltipValue ?? formatValue(data[i].value)));
     svg.appendChild(hit);
   });
 

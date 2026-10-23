@@ -29,6 +29,7 @@ const App = {
     this.wireExport();
     Filters.render();
     Board.render();
+    if (location.hash === "#analises") document.getElementById("tab-dashboard").click();
   },
 
   showLoading(isLoading) {
@@ -77,9 +78,10 @@ const App = {
   },
 
   wireTabs() {
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
+    // só as abas internas (a de Campanhas é um link para outra página)
+    document.querySelectorAll(".tab-btn[data-view]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-btn").forEach((b) => {
+        document.querySelectorAll(".tab-btn[data-view]").forEach((b) => {
           b.classList.remove("is-active");
           b.setAttribute("aria-selected", "false");
         });
@@ -89,6 +91,8 @@ const App = {
         const view = btn.dataset.view;
         document.querySelectorAll(".view").forEach((v) => v.classList.remove("is-active"));
         document.getElementById(`view-${view}`).classList.add("is-active");
+        // mantém a aba no endereço, para links como index.html#analises
+        history.replaceState(null, "", view === "dashboard" ? "#analises" : location.pathname + location.search);
 
         if (view === "dashboard") Dashboard.render();
       });

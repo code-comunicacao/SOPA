@@ -1113,6 +1113,87 @@ table.data-table tr:last-child td { border-bottom: none; }
 }
 
 /* =========================================================================
+   Campanhas de e-mail (campanhas.html)
+   ========================================================================= */
+
+/* classes com display próprio (grid/flex) venceriam o [hidden] do navegador */
+[hidden] { display: none !important; }
+
+a.tab-btn { text-decoration: none; }
+
+.dash-updated .link-btn { font-size: 0.78rem; margin-left: 8px; }
+
+.camp-empty {
+  max-width: 640px;
+  margin: 24px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.camp-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  background: var(--surface);
+  border-radius: var(--radius-panel);
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.camp-status strong { font-family: var(--font-display); font-size: 1.15rem; color: var(--ink); }
+.camp-status.is-error strong { color: var(--danger); }
+.camp-status .btn-primary { margin-top: 6px; }
+
+.camp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius-panel);
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+.camp-filters .filter-search { margin-bottom: 0; flex: 1 1 240px; }
+.camp-filters .filter-select-field { margin-bottom: 0; min-width: 150px; }
+.camp-filters .filter-date-row { flex: 0 1 280px; }
+.camp-filter-checks { display: flex; flex-direction: column; }
+.camp-filter-checks .filter-check { padding: 2px 0; }
+.camp-filters-foot {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+.camp-filters-foot strong { color: var(--ink); font-family: var(--font-mono); }
+
+table.data-table th.num,
+table.data-table td.num { text-align: right; white-space: nowrap; }
+table.data-table td.nowrap { white-space: nowrap; }
+table.data-table th.is-sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+table.data-table th.is-sortable:hover { color: var(--ink); }
+table.data-table th.is-sorted { color: var(--accent-hi); }
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+  max-width: 52ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.warn-mark { color: var(--danger); font-weight: 700; margin-left: 4px; cursor: help; }
+.rate-bad { color: var(--danger); font-weight: 700; }
+
+/* =========================================================================
    Responsive
    ========================================================================= */
 
