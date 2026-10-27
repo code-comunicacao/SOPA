@@ -170,6 +170,15 @@ button, input, select, textarea { font-family: inherit; color: inherit; }
   box-shadow: 0 6px 24px oklch(0.1 0 0 / 18%);
 }
 
+.brand { display: flex; align-items: center; gap: 12px; flex: none; }
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: block;
+  flex: none;
+}
+
 .wordmark-group { display: flex; flex-direction: column; gap: 1px; flex: none; }
 .wordmark {
   font-family: var(--font-display);
