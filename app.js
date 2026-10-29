@@ -5,6 +5,7 @@
 const App = {
   editingId: null,
   editingAttachments: [],
+  uploads: new Set(),
 
   async init() {
     this.wireTheme();
@@ -113,28 +114,19 @@ const App = {
       if (e.key === "Escape" && backdrop.classList.contains("is-open")) this.closeModal();
     });
 
-    document.getElementById("task-attachment-input").addEventListener("change", async (e) => {
+    document.getElementById("task-attachment-input").addEventListener("change", (e) => {
       const files = [...e.target.files];
       e.target.value = "";
 
+      // cada arquivo vira um job registrado em this.uploads; o submit espera
+      // todos terminarem, para nunca gravar o placeholder "enviando…" na tarefa
       for (const file of files) {
         const placeholder = { name: file.name, size: Math.max(1, Math.round(file.size / 1024)), uploading: true };
         this.editingAttachments.push(placeholder);
-        this.renderAttachmentList();
-
-        const path = `${this.currentTaskId}/${uid()}-${file.name}`;
-        const { error } = await sbClient.storage.from("attachments").upload(path, file);
-        const idx = this.editingAttachments.indexOf(placeholder);
-        if (error) {
-          console.error("Falha ao enviar anexo:", error);
-          showToast(`Falha ao enviar "${file.name}"`);
-          if (idx !== -1) this.editingAttachments.splice(idx, 1);
-        } else {
-          const { data } = sbClient.storage.from("attachments").getPublicUrl(path);
-          if (idx !== -1) this.editingAttachments[idx] = { name: file.name, size: placeholder.size, path, url: data.publicUrl };
-        }
-        this.renderAttachmentList();
+        const job = this.uploadAttachment(file, placeholder).finally(() => this.uploads.delete(job));
+        this.uploads.add(job);
       }
+      this.renderAttachmentList();
     });
 
     document.getElementById("btn-delete-task").addEventListener("click", () => {
@@ -152,6 +144,14 @@ const App = {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const id = this.currentTaskId;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const submitLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      if (this.uploads.size) submitBtn.textContent = "Aguardando anexos…";
+      while (this.uploads.size) await Promise.allSettled([...this.uploads]);
+      submitBtn.textContent = submitLabel;
+      submitBtn.disabled = false;
+
       const dueAt = combineDateTime(
         document.getElementById("task-due-date").value,
         document.getElementById("task-due-time").value
@@ -171,12 +171,11 @@ const App = {
         dueAt,
         createdAt: this.editingId ? Store.get(id).createdAt : nowISO(),
         completedAt: this.editingId ? Store.get(id).completedAt : null,
-        attachments: [...this.editingAttachments],
+        attachments: this.editingAttachments.filter((a) => !a.uploading),
       };
       if (!task.title || !task.requesterName) return;
 
       const wasEditing = this.editingId;
-      const submitBtn = form.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
       await Store.upsert(task);
       submitBtn.disabled = false;
@@ -234,6 +233,28 @@ const App = {
     this.renderAttachmentList();
     backdrop.classList.add("is-open");
     setTimeout(() => document.getElementById("task-title").focus(), 50);
+  },
+
+  async uploadAttachment(file, placeholder) {
+    // o Storage recusa chaves com acentos e alguns símbolos ("Invalid key");
+    // o nome original continua sendo o exibido e o usado no download
+    const safeName = file.name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w.\- ()]/g, "_");
+    const path = `${this.currentTaskId}/${uid()}-${safeName}`;
+    const { error } = await sbClient.storage.from("attachments").upload(path, file);
+    const idx = this.editingAttachments.indexOf(placeholder);
+    if (error) {
+      console.error("Falha ao enviar anexo:", error);
+      showToast(`Falha ao enviar "${file.name}"`);
+      if (idx !== -1) this.editingAttachments.splice(idx, 1);
+    } else if (idx === -1) {
+      // o anexo foi removido ou o modal foi cancelado durante o envio
+      sbClient.storage.from("attachments").remove([path]).catch(() => {});
+      return;
+    } else {
+      const { data } = sbClient.storage.from("attachments").getPublicUrl(path);
+      this.editingAttachments[idx] = { name: file.name, size: placeholder.size, path, url: data.publicUrl };
+    }
+    if (idx !== -1) this.renderAttachmentList();
   },
 
   renderAttachmentList() {
