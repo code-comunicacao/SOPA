@@ -21,7 +21,7 @@
 
 <header class="app-header">
   <div class="brand">
-    <img class="brand-logo" src="https://img.mailinblue.com/8183049/images/content_library/original/6ae0f91d351b31f60a338ceb.png" alt="CESAR" width="38" height="38" />
+    <img class="brand-logo" src="logo_CESAR.png" alt="CESAR" width="38" height="38" />
     <div class="wordmark-group">
       <div class="wordmark">SOPA<span class="wordmark-dot">.</span></div>
       <div class="wordmark-full">Solicitações Organizadas para Atendimento</div>
@@ -79,6 +79,50 @@
       </div>
       <div class="dash-updated">
         Atualizado em <span id="dash-updated-time" class="mono"></span>
+      </div>
+    </div>
+
+    <div class="camp-filters" id="dash-filters" role="search">
+      <label class="filter-select-field">
+        Período
+        <select id="df-period">
+          <option value="all">Todo o período</option>
+          <option value="this-month">Este mês</option>
+          <option value="last-month">Mês passado</option>
+          <option value="3m">Últimos 3 meses</option>
+          <option value="6m">Últimos 6 meses</option>
+          <option value="12m">Últimos 12 meses</option>
+          <option value="year">Este ano</option>
+          <option value="custom">Personalizado</option>
+        </select>
+      </label>
+      <label class="filter-select-field">
+        De
+        <select id="df-from"></select>
+      </label>
+      <label class="filter-select-field">
+        Até
+        <select id="df-to"></select>
+      </label>
+      <label class="filter-select-field">
+        Responsável
+        <select id="df-assignee"></select>
+      </label>
+      <label class="filter-select-field">
+        Setor
+        <select id="df-sector"></select>
+      </label>
+      <label class="filter-select-field">
+        Categoria
+        <select id="df-category"></select>
+      </label>
+      <label class="filter-select-field">
+        Prioridade
+        <select id="df-priority"></select>
+      </label>
+      <div class="camp-filters-foot">
+        <span id="dash-result-bar"></span>
+        <button type="button" class="link-btn" id="df-reset">Limpar filtros</button>
       </div>
     </div>
 

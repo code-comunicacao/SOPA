@@ -1168,6 +1168,8 @@ a.tab-btn { text-decoration: none; }
 }
 .camp-filters .filter-search { margin-bottom: 0; flex: 1 1 240px; }
 .camp-filters .filter-select-field { margin-bottom: 0; min-width: 150px; }
+#dash-filters .filter-select-field { flex: 1 1 130px; min-width: 130px; }
+#dash-filters .filter-select-field select { width: 100%; }
 .camp-filters .filter-date-row { flex: 0 1 280px; }
 .camp-filter-checks { display: flex; flex-direction: column; }
 .camp-filter-checks .filter-check { padding: 2px 0; }
