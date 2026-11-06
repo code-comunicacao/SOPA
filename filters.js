@@ -7,6 +7,7 @@ const Filters = {
     search: "",
     priorities: new Set(),
     assignee: "",
+    requester: "",
     sector: "",
     category: "",
     deadline: "all", // all | overdue | 24h | week
@@ -17,7 +18,7 @@ const Filters = {
 
   isActive() {
     const s = this.state;
-    return !!s.search || s.priorities.size || s.assignee || s.sector || s.category ||
+    return !!s.search || s.priorities.size || s.assignee || s.requester || s.sector || s.category ||
       s.deadline !== "all" || s.onlyAttachments || s.dateFrom || s.dateTo;
   },
 
@@ -26,6 +27,7 @@ const Filters = {
       search: "",
       priorities: new Set(),
       assignee: "",
+      requester: "",
       sector: "",
       category: "",
       deadline: "all",
@@ -39,6 +41,10 @@ const Filters = {
 
   knownSectors() {
     return distinctValues(Store.all(), "requesterSector");
+  },
+
+  knownRequesters() {
+    return distinctValues(Store.all(), "requesterName");
   },
 
   knownCategories() {
@@ -58,6 +64,7 @@ const Filters = {
       if (q && !(t.title.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))) return false;
       if (s.priorities.size && !s.priorities.has(t.priority)) return false;
       if (s.assignee && t.assignee !== s.assignee) return false;
+      if (s.requester && t.requesterName !== s.requester) return false;
       if (s.sector && t.requesterSector !== s.sector) return false;
       if (s.category && t.category !== s.category) return false;
       if (s.onlyAttachments && !(t.attachments && t.attachments.length)) return false;
@@ -134,6 +141,7 @@ const Filters = {
       </label>
 
       ${selectGroup("Responsável", ASSIGNEES, "assignee", "Todos")}
+      ${selectGroup("Solicitante", this.knownRequesters(), "requester", "Todos")}
       ${selectGroup("Setor solicitante", this.knownSectors(), "sector", "Todos")}
       ${selectGroup("Categoria", this.knownCategories(), "category", "Todas")}
 
