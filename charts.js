@@ -186,7 +186,8 @@ function barChartHorizontalStacked(container, data, { barHeight = 24, gap = 16 }
 function lineChart(container, data, { color = "var(--accent)", height = 200, formatValue = (v) => v } = {}) {
   container.innerHTML = "";
   const width = Math.max(container.clientWidth || 560, 480);
-  const padTop = 20, padBottom = 26, padLeft = 8, padRight = 8;
+  // margem lateral suficiente para os rótulos centralizados das pontas
+  const padTop = 20, padBottom = 26, padLeft = 24, padRight = 24;
   const innerH = height - padTop - padBottom;
   const innerW = width - padLeft - padRight;
   const max = Math.max(1, ...data.map((d) => d.value));
@@ -309,7 +310,8 @@ function squarify(items, x, y, w, h) {
 }
 
 /**
- * Treemap chart. data: [{ label, value }]. Rectangle area ∝ value; color
+ * Treemap chart. data: [{ label, value, tooltipValue? }] (tooltipValue entra
+ * no tooltip como HTML — escape antes). Rectangle area ∝ value; color
  * intensity also tracks value (same-hue scale). Labels shown when the
  * rectangle is large enough; exact count always available via tooltip.
  */
@@ -342,7 +344,7 @@ function treemapChart(container, data, { color = "var(--accent)", height = 340 }
       cell.innerHTML = `<span class="treemap-value mono">${r.value}</span>`;
     }
 
-    wireTooltip(cell, tooltipHTML(r.label, `${r.value} solicitaç${r.value === 1 ? "ão" : "ões"}`));
+    wireTooltip(cell, tooltipHTML(escapeHtml(r.label), r.tooltipValue ?? `${r.value} solicitaç${r.value === 1 ? "ão" : "ões"}`));
     wrap.appendChild(cell);
   });
 

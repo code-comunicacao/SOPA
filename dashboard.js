@@ -512,12 +512,19 @@ const Dashboard = {
   },
 
   renderTreemap(tasks, range) {
-    const counts = new Map();
-    tasks.forEach((t) => counts.set(t.category, (counts.get(t.category) || 0) + 1));
-    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-    const top = sorted.slice(0, 15).map(([label, value]) => ({ label, value }));
-    const restTotal = sorted.slice(15).reduce((s, [, v]) => s + v, 0);
-    if (restTotal > 0) top.push({ label: "Outros", value: restTotal });
+    const byCategory = new Map();
+    tasks.forEach((t) => {
+      if (!byCategory.has(t.category)) byCategory.set(t.category, []);
+      byCategory.get(t.category).push(t);
+    });
+    const sorted = [...byCategory.entries()].map(([label, list]) => [label, list.length, list]).sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 15).map(([label, value, list]) => ({
+      label, value, tooltipValue: breakdownHTML(list, "requesterSector", "Outros"),
+    }));
+    const rest = sorted.slice(15).flatMap(([, , list]) => list);
+    if (rest.length > 0) {
+      top.push({ label: "Outros", value: rest.length, tooltipValue: breakdownHTML(rest, "requesterSector", "Outros") });
+    }
     treemapChart(document.getElementById("chart-treemap"), top, { color: "var(--accent)" });
     setPanelHead("panel-treemap", "Itens mais solicitados", `Total por categoria — ${range ? this.periodLabel() : "histórico completo"}`);
 
@@ -543,7 +550,7 @@ const Dashboard = {
         label,
         value: list.length,
         fullLabel: escapeHtml(label),
-        tooltipValue: categoryBreakdownHTML(list),
+        tooltipValue: breakdownHTML(list, "category", "Outras"),
       }));
     barChartHorizontal(document.getElementById("chart-top-requesters"), data, { color: "var(--accent)" });
 
@@ -597,8 +604,13 @@ const Dashboard = {
     const [from, to] = range ? this.periodMonths() : [addMonths(current, -6), current];
     const data = [];
     for (let k = from; k <= to; k = addMonths(k, 1)) {
-      const count = tasks.filter((t) => monthKey(t.createdAt) === k).length;
-      data.push({ label: monthLabel(monthStart(k).toISOString()), value: count, partial: k === current });
+      const inMonth = tasks.filter((t) => monthKey(t.createdAt) === k);
+      data.push({
+        label: monthLabel(monthStart(k).toISOString()),
+        value: inMonth.length,
+        tooltipValue: breakdownHTML(inMonth, "requesterSector", "Outros"),
+        partial: k === current,
+      });
     }
     const chartEl = document.getElementById("chart-monthly");
     barChartVertical(chartEl, data, { color: "var(--accent)" });
@@ -687,15 +699,18 @@ function setNote(panelId, text) {
   note.textContent = text;
 }
 
-// tooltip "8 solicitações" + quantas foram de cada categoria (até 6 linhas;
-// acima disso, as menores viram "Outras")
-function categoryBreakdownHTML(list) {
+// tooltip "8 solicitações" + quantas foram de cada valor de `field`
+// (categoria, setor…); até 6 linhas, acima disso as menores viram `restLabel`
+function breakdownHTML(list, field, restLabel) {
   const counts = new Map();
-  list.forEach((t) => counts.set(t.category, (counts.get(t.category) || 0) + 1));
+  list.forEach((t) => {
+    const key = t[field] || "Não informado";
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
   let rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
   if (rows.length > 6) {
     const rest = rows.slice(5).reduce((s, [, n]) => s + n, 0);
-    rows = rows.slice(0, 5).concat([["Outras", rest]]);
+    rows = rows.slice(0, 5).concat([[restLabel, rest]]);
   }
   return `${list.length} solicitaç${list.length === 1 ? "ão" : "ões"}
     <ul class="chart-tooltip-list">
