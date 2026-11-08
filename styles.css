@@ -1036,6 +1036,22 @@ svg.chart .hit-area { cursor: pointer; }
   font-weight: 700;
   color: var(--shell-ink);
 }
+.chart-tooltip-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 6px 0 0;
+  border-top: 1px solid oklch(1 0 0 / 14%);
+  min-width: 160px;
+}
+.chart-tooltip-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--shell-ink-muted);
+}
+.chart-tooltip-list li span:last-child { font-family: var(--font-mono); font-weight: 700; color: var(--shell-ink); }
 
 /* --- treemap: area ∝ value, color intensity also tracks value --- */
 

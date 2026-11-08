@@ -531,12 +531,20 @@ const Dashboard = {
   },
 
   renderTopRequesters(tasks) {
-    const counts = new Map();
-    tasks.forEach((t) => counts.set(t.requesterName, (counts.get(t.requesterName) || 0) + 1));
-    const data = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
+    const byRequester = new Map();
+    tasks.forEach((t) => {
+      if (!byRequester.has(t.requesterName)) byRequester.set(t.requesterName, []);
+      byRequester.get(t.requesterName).push(t);
+    });
+    const data = [...byRequester.entries()]
+      .sort((a, b) => b[1].length - a[1].length)
       .slice(0, 5)
-      .map(([label, value]) => ({ label, value }));
+      .map(([label, list]) => ({
+        label,
+        value: list.length,
+        fullLabel: escapeHtml(label),
+        tooltipValue: categoryBreakdownHTML(list),
+      }));
     barChartHorizontal(document.getElementById("chart-top-requesters"), data, { color: "var(--accent)" });
 
     if (data.length) {
@@ -677,6 +685,22 @@ function setNote(panelId, text) {
     panel.appendChild(note);
   }
   note.textContent = text;
+}
+
+// tooltip "8 solicitações" + quantas foram de cada categoria (até 6 linhas;
+// acima disso, as menores viram "Outras")
+function categoryBreakdownHTML(list) {
+  const counts = new Map();
+  list.forEach((t) => counts.set(t.category, (counts.get(t.category) || 0) + 1));
+  let rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
+  if (rows.length > 6) {
+    const rest = rows.slice(5).reduce((s, [, n]) => s + n, 0);
+    rows = rows.slice(0, 5).concat([["Outras", rest]]);
+  }
+  return `${list.length} solicitaç${list.length === 1 ? "ão" : "ões"}
+    <ul class="chart-tooltip-list">
+      ${rows.map(([cat, n]) => `<li><span>${escapeHtml(cat)}</span><span>${n}</span></li>`).join("")}
+    </ul>`;
 }
 
 function setPanelHead(panelId, title, subtitle) {
